@@ -13,7 +13,7 @@ dependencies:
   - docker info
   - gcloud version
   - docker pull $DOCKER_PROJECT/$IMAGE_NAME:_ || true
-  - curl -L https://github.com/docker/compose/releases/download/1.8.1/docker-compose-`uname -s`-`uname -m` > ../bin/docker-compose && chmod +x ../bin/docker-compose
+  - curl -Y 1000 -y 5 --progress-bar --retry 3 -L https://github.com/docker/compose/releases/download/1.8.1/docker-compose-`uname -s`-`uname -m` > ../bin/docker-compose && chmod +x ../bin/docker-compose
 
 test:
   override:
