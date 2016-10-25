@@ -11,39 +11,15 @@ dependencies:
   - docker info
   - gcloud version
   - docker pull $DOCKER_PROJECT/$IMAGE_NAME:_ || true
+  - curl -L https://github.com/docker/compose/releases/download/1.5.0/docker-compose-`uname -s`-`uname -m` > ../bin/docker-compose && chmod +x ../bin/docker-compose
 
 test:
   override:
   - docker build --rm=false -t $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_BUILD_NUM .
-
-deployment:
-  cache:
-    branch: master
-    commands:
-    - >
-      if [ -n "$DOCKER_PASS" ]; then
-        docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-        docker build --rm=false -t $DOCKER_PROJECT/$IMAGE_NAME:_ .
-        docker push $DOCKER_PROJECT/$IMAGE_NAME:_
-      fi
-  release:
-    tag: /^[0-9].*-r[0-9]+$/
-    commands:
-    - >
-      if [ -n "$DOCKER_PASS" ]; then
-        docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-        docker build --rm=false -t $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_TAG .
-        docker tag $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_TAG $DOCKER_PROJECT/$IMAGE_NAME:latest
-        docker push $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_TAG
-        docker push $DOCKER_PROJECT/$IMAGE_NAME:latest
-      fi
-    - >
-      if [ -n "$GCLOUD_SERVICE_KEY" ]; then
-        echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json
-        gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
-        echo 'ENV BITNAMI_CONTAINER_ORIGIN=GCR' >> Dockerfile
-        docker build --rm=false -t gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$CIRCLE_TAG .
-        docker tag gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$CIRCLE_TAG gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest
-        gcloud docker -- push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$CIRCLE_TAG
-        gcloud docker -- push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest
-      fi
+  - docker-compose build
+  - docker-compose pull
+  - docker-compose up:
+      background: true
+  - sleep 30
+  - docker-compose stop
+  - docker-compose rm -f
